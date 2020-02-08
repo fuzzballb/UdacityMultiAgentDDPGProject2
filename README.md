@@ -17,13 +17,11 @@ The state for the first agent looks like:  [ 0.          0.          0.         
 
 The agents try to find the action with the most future cumulative reward, and thus trains the deep Neural network to predict the best action, given a random state.
 
-{UPDAAAATE}
-[![Training Youtube video](https://img.youtube.com/vi/c-2tIOe-1K4/0.jpg)](https://www.youtube.com/watch?v=c-2tIOe-1K4). 
+[![Training Youtube video](https://img.youtube.com/vi/v9H9NLovaNI/0.jpg)](https://www.youtube.com/watch?v=v9H9NLovaNI). 
 
-*Training in progress not wasting any GPU cycles on rendering a full size image*
+*Training in progress not wasting any GPU cycles on rendering a full size image or all frames*
 
-{UPDAAAATE}
-[![Playing Youtube video](https://img.youtube.com/vi/sxyRiDX6dzE/0.jpg)](https://www.youtube.com/watch?v=sxyRiDX6dzE)
+[![Playing Youtube video](https://img.youtube.com/vi/mRjzeCEhztw/0.jpg)](https://www.youtube.com/watch?v=mRjzeCEhztw)
 
 *Tennis agents*
 
