@@ -55,138 +55,174 @@ When all dependencies are resolved, the training can begin.
 
 To start, and make sure the environment works, I used the DDPG example from the previous example, and just added two agents with their own actor and critic network. As expected, from what i learned about multi agent training, this didn't perform at all. 
 
-{UPDAAAATE}
+{UPDAAAATE Train-two-individual-agents.gif}
 ![Training with default epsilon decay](https://github.com/fuzzballb/UdacityDDPGProject2/blob/master/images/FailedToLearn.PNG "Training with default epsilon decay")
 
 
 ## Solutions for getting a better score
 
+**1. agents share a replay buffer**
+
+Just like in real life, if you start playing tennis, the first thing you do is not trying to defeat the other player, but keep the ball in the air instead. You learn from your own actions, but you also learn from what the other player is doing. Together you form a collective memory of actions, given at states and their rewards. 
+
+To implement this, the critic network and replay buffer needed to be seperated from the agents. Now the critic can learn from the experences of both agents at the same time. While the critic is learning the best Q value, given a state and action, the actors are learning from the critic individually.
+
+{UPDAAAATE Shared-memory.gif}
+
+**2. changing hyper parameters**
+
+Different environments, need different hyper parameters. The parameters from the last project, didn't perform in our new multi agent environment, and there we had the most succes when editing the learning rate, of both the Actor and Critic. 
+
+```python
+LR_ACTOR = 1e-4         # learning rate of the actor 
+LR_CRITIC = 3e-4        # learning rate of the critic
+```
+
+Changing the speed at which the target network is updated with the latest local network wights also had a positive effect
+
+```python
+TAU = 2e-1              # for soft update of target parameters
+```
+
+{UPDAAAATE Changed-hyper-parameters.gif}
+
+**3. changing exploration noise **
+
+While changing the noise function i first reset the sigma to 0.2 instead of 0.1. This alone did not do a lot for the training results. Changing  
+
+```python
+np.array([random.random() for i in range(len(x))])
+```
+
+to a random standaard deviation 
+
+```python
+np.random.standard_normal(self.size)
+```
+
+Did have a good effect on training source : https://github.com/agakshat/maddpg/blob/master/ExplorationNoise.py
+
+{UPDAAAATE after-changing-noise-fuctio.gif}
 
 
 
 
-I found a few possible issues with using the default solution and tried them one by one.
-
-**1. reduce noise**
-
-The noise that is added to the training was to much so i reduced the sigma from 0.2 to 0.1. This alone did not do a lot for the training results
-
-![Changed sigma](https://github.com/fuzzballb/UdacityDDPGProject2/blob/master/images/Result1.PNG "Changed sigma")
 
 
-**2. increase episode length**
-
-Next I found that the agent probaly needed more time to get to it's goal then de maximum episode length that A specified. Thus the agent rarely got to it's goal. and if it did, it was because it was already close. This was the first time the score excided 1.0. Unfortunately it got stuck at around 2.x. not nearly the 30 i needed
-
-![Changed episode length](https://github.com/fuzzballb/UdacityDDPGProject2/blob/master/images/Result2.PNG "Changed episode length")
 
 
-**3. Normalize**
 
-By defining batch normalisation and adding it to the forward pass
 
-Still around the 2.x and not increasing.
-
-![Normalisation](https://github.com/fuzzballb/UdacityDDPGProject2/blob/master/images/Result3.PNG "Normalisation")
-
-**4. Increase replay buffer size**
-
-Helped get above 3.x in the first step, but the learning didn't increase enough over time
-
-![Increase replay buffer size](https://github.com/fuzzballb/UdacityDDPGProject2/blob/master/images/Result5.PNG "Increase replay buffer size")
-
-**5. resetting the agent after every**
-
-Agent.reset() helped get above 3.x in the first 100 episodes even without the previous 4. increased buffer size step
- 
-*No mayor change in learning*
- 
-**6. learninig for more then 500 episodes**
-
-When trying to learn for more then 500 episodes connection with the Udacity environment gets lost.  
-
-![More then 500 episodes](https://github.com/fuzzballb/UdacityDDPGProject2/blob/master/images/Result4.PNG "More then 500 episodes")
-
-*Reloading saved weights to continue learning didn't work, probably because I didn't save and reload the *target* networks of the actor and critic.*
-
-**7. increasing learning rate** 
-
-When the steps in learning are to small, it can take a long time before the optimal value is found, make it to big, and you will overshoot your optimal value.
-
-![Learning rate](https://github.com/fuzzballb/UdacityDDPGProject2/blob/master/images/Result6.PNG "Learning rate")
 
 
 ## Learning Algorithm
 
-**1. First we initialize the agent in the Navigation notebook**
+**1. First we initialize two agents and an academy in the Navigation notebook**
 
-*Navigation.ipynb*
+*MADDPG.ipynb*
 
 ```Python
 # initialise an agent
-agent = Agent(state_size=33, action_size=4, random_seed=2)
+# initialise an agent
+agent1 = Agent(device=DEVICE, key=0, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
+agent2 = Agent(device=DEVICE, key=1, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
+               
+# initialise an academy
+academy = Academy(device=DEVICE, state_size=24, action_size=2, random_seed=2, memory=shared_memory, checkpoint_folder=CHECKPOINT_FOLDER)
 ```
 
 **2. This sets the state and action size for the agent and creates an Actor, and a Critic neural net, with corresponding target network.** 
 
-*ddpg_agent.ipynb*
+*ddpg_agent.py*
+
+In the Agent class (actor)
 
 ```Python
         # Actor Network (w/ Target Network)
-        self.actor_local = Actor(state_size, action_size, random_seed).to(device)
-        self.actor_target = Actor(state_size, action_size, random_seed).to(device)
+        self.actor_local = Actor(state_size, action_size, random_seed).to(self.device)
+        self.actor_target = Actor(state_size, action_size, random_seed).to(self.device)
         self.actor_optimizer = optim.Adam(self.actor_local.parameters(), lr=LR_ACTOR)
-
-        # Critic Network (w/ Target Network)
-        self.critic_local = Critic(state_size, action_size, random_seed).to(device)
-        self.critic_target = Critic(state_size, action_size, random_seed).to(device)
-        self.critic_optimizer = optim.Adam(self.critic_local.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
 ```
 
-DDPG is a algorithm that requires a actor and critic network. Both of these network also have target networks, that get small updates from the local network. This way the values don't change to much over a short time, and learning becomes more stable.
+In the Academy class (critic)
 
+```Python
+        # Critic Network (w/ Target Network)
+        self.critic_local = Critic(state_size, action_size, random_seed).to(self.device)
+        self.critic_target = Critic(state_size, action_size, random_seed).to(self.device)
+        self.critic_optimizer = optim.Adam(self.critic_local.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
+```   
+
+DDPG is a algorithm that requires a actor and critic network. Both of these network also have target networks, that get small updates from the local network. The weights of the local network are slowly copied to the target networks for the learning to become more stable. The copyspeed is determined by the TAU hyper parameter
+
+```Python
+        # ----------------------- update target networks ----------------------- #
+        self.soft_update(self.critic_local, self.critic_target, TAU)
+        self.soft_update(actor.actor_local, actor.actor_target, TAU)
+```           
 
 **3. Adding noise to increase exploration instead of only exploiting the paths that have lead to success**
 
-*ddpg_agent.ipynb*
+*MADDPG.ipynb*
 
 ```Python
-        # Noise process
-        self.noise = OUNoise(action_size, random_seed)
+        noise = OUNoise(action_size, 2)
 ```
 
-Here we define noise that will be added to the action that is obtained from the actor network.
+Here we define noise that will be added to the action that is obtained from the actor network. Both of the actors need to train in the same environment, thus the same noise also needs to be shared by both agents.
+
+```Python
+# initialise an agent
+agent1 = Agent(device=DEVICE, key=0, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
+agent2 = Agent(device=DEVICE, key=1, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
+```
 
 
 **4. Replay buffer, to store past experiences**
 
-*ddpg_agent.ipynb*
+*MADDPG.ipynb*
 
 ```Python
-        # Replay memory
-        self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
+        shared_memory = ReplayBuffer(DEVICE, action_size, BUFFER_SIZE, BATCH_SIZE, 2)
 ```
 
-Because DDPG is a off policy algorithm (see bottom of the page), just like Q learning. It can learn from past experiences that are stored in the replay buffer. 
+Because DDPG is a off policy algorithm, just like Q learning. It can learn from past experiences that are stored in the replay buffer. As discust before, the replay buffer of both Agents need to be the same replay buffer, so the critic can learn from both agents at the same time.
+
+*MADDPG.ipynb*
+
+```Python
+        # initialise an agent
+        agent1 = Agent(device=DEVICE, key=0, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
+        agent2 = Agent(device=DEVICE, key=1, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
+
+        # initialise an academy
+        academy = Academy(device=DEVICE, state_size=24, action_size=2, random_seed=2, memory=shared_memory, checkpoint_folder=CHECKPOINT_FOLDER)
+```
 
 
 **5. Learn**
 
-The critic network takes actions and states and produces a Q value. This is compared to the actual value in the environment, the difference between expected Q and actual reward from the environment is used to calculate a loss, which it tries to minimize. When the critic starts giving estimates about the Q value given states and actions, the actor network can use these trained values, to train the best action for a given state. 
+The critic network takes actions and states and produces a Q value. This is compared to the actual value in the environment, the difference between expected Q and actual reward from the environment is used to calculate a loss, which it tries to minimize. When the critic starts giving estimates about the Q value given states and actions, both actor networks can use these trained values, to train the best action for a given state. 
 
-for a more detailed explanation see the video below 
+for a more detailed explanation of DDPG actor critc, see the video below 
 
 [![Youtube lecture about DDPG](https://img.youtube.com/vi/_pbd6TCjmaw/0.jpg)](https://www.youtube.com/watch?v=_pbd6TCjmaw&t=454). 
 
 
+*ddpg_agent.py*
 
-First, we get the next states from the stored experiences 
+First, we get the next states from the stored experiences and feed these to the Academy (Critic)
+
 
 ```Python
+class Academy:    
+   ...
+   def learn(self, actor, experiences, gamma):
+   ...
         states, actions, rewards, next_states, dones = experiences
 ```
 
-Using these next_states we ask the actor network to predict the next actions
+Using these next_states we ask the provided Actor network to predict the next actions
 
 ![Actor network](https://github.com/fuzzballb/UdacityDDPGProject2/blob/master/images/Actor.png "Actor network")
 
@@ -194,7 +230,7 @@ Using these next_states we ask the actor network to predict the next actions
 ```Python
         # ---------------------------- update critic ---------------------------- #
         # Get predicted next-state actions and Q values from target models
-        actions_next = self.actor_target(next_states)
+        actions_next = actor.actor_target(next_states)
 ```
 
 Then we use these next actions to get the predicted Q targets using the Critic network 
@@ -233,43 +269,26 @@ If there is a difference, we change the weights of the local critic network to g
 ```
 When the Critic network is getting better at producing the Q values (using given states and actions as input), because it has been training on values gained from experiences. It starts giving the right Q values, even if it wouldn’t have the recorded experiences anymore.
 
-At this point we can use the Critic’s learned states, actions to Q values relationship to train the Actor. We use the states from the replay memory as input for the Actor network to find the best action
+At this point we can use the Critic’s learned states, actions to Q values relationship to train the provided Actor. We use the states from the shared replay memory as input for the provided Actor network to find the best action
  
 ![Actor network](https://github.com/fuzzballb/UdacityDDPGProject2/blob/master/images/Actor.png "Actor network")
  
 ```Python
         # ---------------------------- update actor ---------------------------- #
         # Compute actor loss
-        actions_pred = self.actor_local(states)
+        actions_pred = actor.actor_local(states)
 ```
 
 Then we check with the trained Critic network what the Q values are and take the mean. If these Q values are high, then the Actor network made a good prediction. 
 
-Because in training we try to minimize the loss, we take the negative of the Q values, because less is better 
+Because in training we try to minimize the loss, we take the negative of the Q values (less is better)  
 
 ```Python
         actor_loss = -self.critic_local(states, actions_pred).mean()
         # Minimize the loss
-        self.actor_optimizer.zero_grad()
+        actor.actor_optimizer.zero_grad()
         actor_loss.backward()
-        self.actor_optimizer.step()
+        actor.actor_optimizer.step()
 ```
 
 
-## on policy vs off policy
-
-The on-policy aggression is like SARSA, they assume that their experience comes from the agents himself, and they try to improve agents policy right down this online stop. So, the agent plays and then it improves and plays again. And what you want to do is you want to get optimal Strategies as quickly as possible. 
-
-Off-policy algorithms like Q-learning, as an example, they have slightly relax situation. They don't assume that the sessions you're obtained, you're training on, are the ones that you're going to use when the agent is going to finally get kind of unchained and applied to the actual problem. Because of this, it can use data from an experience replay buffer 
-
-
-
-## Model based vs model free 
-
-Model-based reinforcement learning has an agent try to understand the world and create a model to represent it. Here the model is trying to capture 2 functions, the transition function from states $T$ and the reward function $R$. From this model, the agent has a reference and can plan accordingly.
-
-However, it is not necessary to learn a model, and the agent can instead learn a policy directly using algorithms like Q-learning or policy gradient.
-
-A simple check to see if an RL algorithm is model-based or model-free is:
-
-If, after learning, the agent can make predictions about what the next state and reward will be before it takes each action, it's a model-based RL algorithm.
