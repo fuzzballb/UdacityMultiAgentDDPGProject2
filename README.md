@@ -55,8 +55,7 @@ When all dependencies are resolved, the training can begin.
 
 To start, and make sure the environment works, I used the DDPG example from the previous example, and just added two agents with their own actor and critic network. As expected, from what i learned about multi agent training, this didn't perform at all. 
 
-{UPDAAAATE Train-two-individual-agents.gif}
-![Training with default epsilon decay](https://github.com/fuzzballb/UdacityDDPGProject2/blob/master/images/FailedToLearn.PNG "Training with default epsilon decay")
+![Train-two-individual-agents](https://github.com/fuzzballb/UdacityMultiAgentDDPGProject3/blob/master/images/Train-two-individual-agents.gif "Train-two-individual-agents")
 
 
 ## Solutions for getting a better score
@@ -67,7 +66,7 @@ Just like in real life, if you start playing tennis, the first thing you do is n
 
 To implement this, the critic network and replay buffer needed to be seperated from the agents. Now the critic can learn from the experences of both agents at the same time. While the critic is learning the best Q value, given a state and action, the actors are learning from the critic individually.
 
-{UPDAAAATE Shared-memory.gif}
+![Shared-memory](https://github.com/fuzzballb/UdacityMultiAgentDDPGProject3/blob/master/images/Shared-memory.gif "Shared-memory")
 
 **2. changing hyper parameters**
 
@@ -84,7 +83,7 @@ Changing the speed at which the target network is updated with the latest local 
 TAU = 2e-1              # for soft update of target parameters
 ```
 
-{UPDAAAATE Changed-hyper-parameters.gif}
+![Changed-hyper-parameters](https://github.com/fuzzballb/UdacityMultiAgentDDPGProject3/blob/master/images/Changed-hyper-parameters.gif "Changed-hyper-parameters")
 
 **3. changing exploration noise **
 
@@ -102,17 +101,7 @@ np.random.standard_normal(self.size)
 
 Did have a good effect on training source : https://github.com/agakshat/maddpg/blob/master/ExplorationNoise.py
 
-{UPDAAAATE after-changing-noise-fuctio.gif}
-
-
-
-
-
-
-
-
-
-
+![after-changing-noise-fuction](https://github.com/fuzzballb/UdacityMultiAgentDDPGProject3/blob/master/images/after-changing-noise-fuctio.gif "after-changing-noise-fuction")
 
 
 ## Learning Algorithm
