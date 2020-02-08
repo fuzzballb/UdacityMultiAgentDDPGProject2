@@ -1,4 +1,4 @@
-# UdacityMultiAgentDDPGProject2
+# UdacityMultiAgentDDPGProject3
 Multi agent DDPG project Udacity Deep Reinforcement learning nano degree
 
 ## Introduction 
