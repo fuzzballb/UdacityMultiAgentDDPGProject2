@@ -13,19 +13,18 @@ import torch.optim as optim
 BUFFER_SIZE = int(1e6)  # replay buffer size
 BATCH_SIZE = 128        # minibatch size
 GAMMA = 0.99            # discount factor
-
 TAU = 2e-1              # for soft update of target parameters
 LR_ACTOR = 1e-4         # learning rate of the actor 
 LR_CRITIC = 3e-4        # learning rate of the critic
 WEIGHT_DECAY = 0        # L2 weight decay
 
-#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class Agent():
     """Interacts with and learns from the environment."""
     
-    def __init__(self, device, key, state_size, action_size, random_seed, memory, noise, checkpoint_folder = './'):
+    def __init__(self, identity, state_size, action_size, random_seed, memory, noise ):
         # checked
         
         """Initialize an Agent object.
@@ -39,21 +38,16 @@ class Agent():
         self.state_size = state_size
         self.action_size = action_size
         self.seed = random.seed(random_seed)
-        self.device = device
 
-        self.CHECKPOINT_FOLDER = checkpoint_folder
-        self.KEY = key
-        
-        
         # Actor Network (w/ Target Network)
-        self.actor_local = Actor(state_size, action_size, random_seed).to(self.device)
-        self.actor_target = Actor(state_size, action_size, random_seed).to(self.device)
+        self.actor_local = Actor(state_size, action_size, random_seed).to(device)
+        self.actor_target = Actor(state_size, action_size, random_seed).to(device)
         self.actor_optimizer = optim.Adam(self.actor_local.parameters(), lr=LR_ACTOR)
 
-        self.checkpoint_full_name = self.CHECKPOINT_FOLDER + 'checkpoint_agent_' + str(self.KEY) + '.pth'
-        if os.path.isfile(self.checkpoint_full_name):
-            self.actor_local.load_state_dict(torch.load(self.checkpoint_full_name))
-            self.actor_target.load_state_dict(torch.load(self.checkpoint_full_name))
+        self.checkpoint_file_path = './checkpoint_agent_' + str(identity) + '.pth'
+        if os.path.isfile(self.checkpoint_file_path):
+            self.actor_local.load_state_dict(torch.load(self.checkpoint_file_path))
+            self.actor_target.load_state_dict(torch.load(self.checkpoint_file_path))
 
         # Replay memory
         self.memory = memory
@@ -66,7 +60,7 @@ class Agent():
         
         
         """Returns actions for given state as per current policy."""
-        state = torch.from_numpy(state).float().to(self.device)
+        state = torch.from_numpy(state).float().to(device)
         self.actor_local.eval()
         with torch.no_grad():
             action = self.actor_local(state).cpu().data.numpy()
@@ -93,7 +87,7 @@ class Agent():
     
 class Academy:    
             
-    def __init__(self, device, state_size, action_size, random_seed, memory, checkpoint_folder = './'):
+    def __init__(self, state_size, action_size, random_seed, memory):
         # checked
         
         """Initialize an Agent object.
@@ -107,19 +101,18 @@ class Academy:
         self.state_size = state_size
         self.action_size = action_size
         self.seed = random.seed(random_seed)
-        self.device = device
         
-        self.CHECKPOINT_FOLDER = checkpoint_folder
+
 
         # Critic Network (w/ Target Network)
-        self.critic_local = Critic(state_size, action_size, random_seed).to(self.device)
-        self.critic_target = Critic(state_size, action_size, random_seed).to(self.device)
+        self.critic_local = Critic(state_size, action_size, random_seed).to(device)
+        self.critic_target = Critic(state_size, action_size, random_seed).to(device)
         self.critic_optimizer = optim.Adam(self.critic_local.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
         
-        self.checkpoint_full_name = self.CHECKPOINT_FOLDER + 'checkpoint_critic.pth'
-        if os.path.isfile(self.checkpoint_full_name):
-            self.critic_local.load_state_dict(torch.load(self.checkpoint_full_name))
-            self.critic_target.load_state_dict(torch.load(self.checkpoint_full_name))
+        self.checkpoint_file_path = './checkpoint_critic.pth'
+        if os.path.isfile(self.checkpoint_file_path):
+            self.critic_local.load_state_dict(torch.load(self.checkpoint_file_path))
+            self.critic_target.load_state_dict(torch.load(self.checkpoint_file_path))
         
     def step(self, actor, memory):
         # unchecked
@@ -218,7 +211,7 @@ class OUNoise:
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
 
-    def __init__(self, device, action_size, buffer_size, batch_size, seed):
+    def __init__(self, action_size, seed):
         # checked
         """Initialize a ReplayBuffer object.
         Params
@@ -227,11 +220,10 @@ class ReplayBuffer:
             batch_size (int): size of each training batch
         """
         self.action_size = action_size
-        self.memory = deque(maxlen=buffer_size)  # internal memory (deque)
-        self.batch_size = batch_size
+        self.memory = deque(maxlen=BUFFER_SIZE)  # internal memory (deque)
+        self.batch_size = BATCH_SIZE
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
         self.seed = random.seed(seed)
-        self.device = device
     
     def add(self, state, action, reward, next_state, done):
         # checked
@@ -243,13 +235,13 @@ class ReplayBuffer:
         # checked
         
         """Randomly sample a batch of experiences from memory."""
-        experiences = random.sample(self.memory, k=self.batch_size)
+        experiences = random.sample(self.memory, k=BATCH_SIZE)
 
-        states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(self.device)
-        actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).float().to(self.device)
-        rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(self.device)
-        next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(self.device)
-        dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(self.device)
+        states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(device)
+        actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).float().to(device)
+        rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
+        next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(device)
+        dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
 
         return (states, actions, rewards, next_states, dones)
 
