@@ -111,11 +111,11 @@ Did have a good effect on training source : https://github.com/agakshat/maddpg/b
 ```Python
 # initialise an agent
 # initialise an agent
-agent1 = Agent(device=DEVICE, key=0, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
-agent2 = Agent(device=DEVICE, key=1, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
+agent1 = Agent(key=0, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise)
+agent2 = Agent(key=1, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise)
                
 # initialise an academy
-academy = Academy(device=DEVICE, state_size=24, action_size=2, random_seed=2, memory=shared_memory, checkpoint_folder=CHECKPOINT_FOLDER)
+academy = Academy(state_size=24, action_size=2, random_seed=2, memory=shared_memory)
 ```
 
 **2. This sets the state and action size for the agent and creates an Actor, and a Critic neural net, with corresponding target network.** 
@@ -160,8 +160,8 @@ Here we define noise that will be added to the action that is obtained from the 
 
 ```Python
 # initialise an agent
-agent1 = Agent(device=DEVICE, key=0, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
-agent2 = Agent(device=DEVICE, key=1, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
+agent1 = Agent(key=0, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise)
+agent2 = Agent(key=1, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise)
 ```
 
 
@@ -179,11 +179,11 @@ Because DDPG is a off policy algorithm, just like Q learning. It can learn from 
 
 ```Python
         # initialise an agent
-        agent1 = Agent(device=DEVICE, key=0, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
-        agent2 = Agent(device=DEVICE, key=1, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise, checkpoint_folder=CHECKPOINT_FOLDER)
+        agent1 = Agent(key=0, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise)
+        agent2 = Agent(key=1, state_size=24, action_size=2, random_seed=2, memory=shared_memory, noise=noise)
 
         # initialise an academy
-        academy = Academy(device=DEVICE, state_size=24, action_size=2, random_seed=2, memory=shared_memory, checkpoint_folder=CHECKPOINT_FOLDER)
+        academy = Academy(state_size=24, action_size=2, random_seed=2, memory=shared_memory)
 ```
 
 
